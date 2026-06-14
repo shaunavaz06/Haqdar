@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HaqDar — Find Your Entitlements</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f5f7f6; min-height: 100vh; }
+    .header { background: #1D9E75; color: white; padding: 1.5rem; text-align: center; }
+    .header h1 { font-size: 2rem; font-weight: 800; letter-spacing: 1px; }
+    .header h1 span { color: #9FE1CB; }
+    .header p { font-size: 0.9rem; opacity: 0.9; margin-top: 4px; }
+    .lang-row { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
+    .lang-btn { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; padding: 4px 14px; font-size: 0.8rem; cursor: pointer; }
+    .lang-btn.active, .lang-btn:hover { background: white; color: #1D9E75; }
+    .container { max-width: 600px; margin: 0 auto; padding: 1.5rem; }
+    .chat-bubble { background: white; border-radius: 18px; padding: 1.3rem 1.5rem; margin-bottom: 1rem; box-shadow: 0 2px 16px rgba(0,0,0,0.07); }
+    .chat-bubble p { color: #333; line-height: 1.65; font-size: 0.95rem; }
+    .input-card { background: white; border-radius: 18px; padding: 1.2rem; box-shadow: 0 2px 16px rgba(0,0,0,0.07); margin-bottom: 1.2rem; }
+    .input-row { display: flex; gap: 8px; align-items: center; }
+    .input-row input { flex: 1; padding: 12px 16px; border: 1.5px solid #e0ede8; border-radius: 12px; font-size: 0.95rem; outline: none; color: #333; background: #f9fdfb; }
+    .input-row input:focus { border-color: #1D9E75; background: white; }
+    .mic-btn { width: 44px; height: 44px; background: #e8f5ee; color: #1D9E75; border: none; border-radius: 12px; font-size: 1.1rem; cursor: pointer; flex-shrink: 0; }
+    .mic-btn.listening { background: #1D9E75; }
+    .send-btn { width: 44px; height: 44px; background: #1D9E75; color: white; border: none; border-radius: 12px; font-size: 1.2rem; cursor: pointer; flex-shrink: 0; }
+    .send-btn:hover { background: #0F6E56; }
+    .hint { font-size: 0.78rem; color: #999; margin-top: 8px; text-align: center; }
+    .loading-card { background: white; border-radius: 16px; padding: 2rem; text-align: center; box-shadow: 0 2px 16px rgba(0,0,0,0.07); }
+    .spinner { width: 36px; height: 36px; border: 3px solid #e8f5ee; border-top-color: #1D9E75; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+    .loading-card p { color: #1D9E75; font-size: 0.9rem; }
+    .results-header { font-size: 0.78rem; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+    .scheme-card { background: white; border-radius: 16px; padding: 1.2rem 1.4rem; margin-bottom: 0.8rem; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border-left: 4px solid #1D9E75; }
+    .scheme-card h3 { color: #0F6E56; font-size: 1rem; margin-bottom: 5px; }
+    .scheme-card p { color: #555; font-size: 0.87rem; line-height: 1.55; }
+    .docs-label { font-size: 0.75rem; color: #999; margin-top: 10px; margin-bottom: 5px; font-weight: 600; text-transform: uppercase; }
+    .docs { display: flex; flex-wrap: wrap; gap: 5px; }
+    .docs span { background: #e8f5ee; color: #0F6E56; border-radius: 20px; padding: 3px 10px; font-size: 0.76rem; }
+    .share-btn { background: #25D366; color: white; border: none; border-radius: 14px; padding: 13px 20px; cursor: pointer; font-size: 0.92rem; font-weight: 600; margin-top: 0.5rem; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .share-btn:hover { background: #1da851; }
+    .badge { display: inline-block; background: #fff3cd; color: #856404; border-radius: 20px; padding: 2px 10px; font-size: 0.75rem; font-weight: 600; margin-left: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Haq<span>Dar</span></h1>
+  <p>Your government entitlements, in your language • ನಿಮ್ಮ ಹಕ್ಕುಗಳು</p>
+  <div class="lang-row">
+    <button class="lang-btn active" onclick="setLang('en', this)">English</button>
+    <button class="lang-btn" onclick="setLang('kn', this)">ಕನ್ನಡ</button>
+    <button class="lang-btn" onclick="setLang('hi', this)">हिंदी</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="chat-bubble">
+    <p id="bot-message">Namaste! Tell me about yourself — your age, occupation, and state. I'll find which government schemes you qualify for.</p>
+  </div>
+  <div class="input-card">
+    <div class="input-row">
+      <button class="mic-btn" id="mic-btn" onclick="toggleMic()">🎤</button>
+      <input type="text" id="user-input" placeholder="e.g. I am a 28 year old woman in Karnataka..." />
+      <button class="send-btn" onclick="handleSubmit()">→</button>
+    </div>
+    <p class="hint">Speak or type in Kannada, Hindi, or English</p>
+  </div>
+  <div id="results"></div>
+</div>
+
+const CONFIG = {
+  qdrantUrl: "YOUR_CLUSTER_URL:6333",
+  qdrantKey: "YOUR_QDRANT_KEY",
+  groqKey: "YOUR_GROQ_KEY",
+};
+
+  let currentLang = 'en';
+  const PROMPTS = {
+    en: "Namaste! Tell me about yourself — your age, occupation, and state. I'll find which government schemes you qualify for.",
+    kn: "ನಮಸ್ತೆ! ನಿಮ್ಮ ವಯಸ್ಸು, ಉದ್ಯೋಗ ಮತ್ತು ರಾಜ್ಯ ತಿಳಿಸಿ. ನಿಮಗೆ ಯಾವ ಸರ್ಕಾರಿ ಯೋಜನೆಗಳು ಸಿಗುತ್ತವೆ ಎಂದು ಹೇಳುತ್ತೇನೆ.",
+    hi: "नमस्ते! अपनी उम्र, काम और राज्य बताइए। मैं बताऊंगी कि आप किन सरकारी योजनाओं के लिए पात्र हैं।"
+  };
+
+  function setLang(lang, btn) {
+    currentLang = lang;
+    document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('bot-message').textContent = PROMPTS[lang];
+    if (recognition) recognition.lang = { en:'en-IN', kn:'kn-IN', hi:'hi-IN' }[lang];
+  }
+
+  let isListening = false;
+  let recognition;
+  if ('webkitSpeechRecognition' in window) {
+    recognition = new webkitSpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-IN';
+    recognition.onresult = (e) => {
+      document.getElementById('user-input').value = e.results[0][0].transcript;
+      isListening = false;
+      document.getElementById('mic-btn').classList.remove('listening');
+    };
+    recognition.onend = () => {
+      isListening = false;
+      document.getElementById('mic-btn').classList.remove('listening');
+    };
+  }
+
+  function toggleMic() {
+    if (!recognition) { alert('Voice not supported in this browser'); return; }
+    if (isListening) { recognition.stop(); }
+    else { recognition.start(); isListening = true; document.getElementById('mic-btn').classList.add('listening'); }
+  }
+
+  const SCHEMES = [
+    { id:1, name:"PM Jan Dhan Yojana", description:"Free bank account for women and poor families with no minimum balance", eligibility:"any indian citizen without bank account low income family woman", documents:["Aadhaar card","Passport photo"] },
+    { id:2, name:"Janani Suraksha Yojana", description:"Cash assistance for pregnant women for safe delivery in hospital", eligibility:"pregnant woman below poverty line rural urban delivery hospital maternity", documents:["Aadhaar card","BPL card","Pregnancy card from ANM"] },
+    { id:3, name:"Karnataka Gruha Lakshmi", description:"Rs 2000 per month direct cash to woman head of family in Karnataka", eligibility:"karnataka woman head of family ration card holder domestic", documents:["Aadhaar card","Ration card","Bank account"] },
+    { id:4, name:"PM Ujjwala Yojana", description:"Free LPG gas connection for women from poor families", eligibility:"woman below poverty line no gas connection rural poor family cooking", documents:["Aadhaar card","BPL ration card","Passport photo"] },
+    { id:5, name:"Ayushman Bharat PM-JAY", description:"Free health insurance up to Rs 5 lakh per year for poor families", eligibility:"poor family health insurance hospital treatment below poverty line medical sick", documents:["Aadhaar card","Ration card"] },
+    { id:6, name:"PM Awas Yojana Gramin", description:"Free house for homeless families living in kutcha houses in rural areas", eligibility:"rural homeless kutcha house below poverty line no pucca house shelter", documents:["Aadhaar card","BPL card","Land documents"] },
+    { id:7, name:"Karnataka Sandhya Suraksha", description:"Rs 1000 monthly pension for elderly people above 65 years in Karnataka", eligibility:"karnataka elderly person above 65 years old age pension poor senior retired grandfather grandmother", documents:["Aadhaar card","Age proof","Income certificate","Bank account"] },
+    { id:8, name:"MGNREGA Work Scheme", description:"Guaranteed 100 days of paid work per year for rural families", eligibility:"rural adult daily wage worker unskilled manual work job card labour mgnrega 100 days employment guarantee", documents:["Aadhaar card","Job card from gram panchayat","Bank account"] },
+    { id:9, name:"PM Kisan Samman Nidhi", description:"Rs 6000 per year direct cash to farmer families in three installments", eligibility:"farmer agriculture land cultivator small marginal farmer crop", documents:["Aadhaar card","Land records","Bank account"] },
+    { id:10, name:"Sukanya Samriddhi Yojana", description:"Savings scheme for girl child with high interest rate and tax benefits", eligibility:"girl child below 10 years parent guardian savings education marriage daughter", documents:["Girl birth certificate","Parent Aadhaar","Post office or bank account"] }
+  ];
+
+  function searchQdrant(query) {
+    const keywords = query.toLowerCase().split(/\s+/);
+    const scored = SCHEMES.map(scheme => {
+      const text = `${scheme.name} ${scheme.description} ${scheme.eligibility}`.toLowerCase();
+      let score = 0;
+      keywords.forEach(k => { if (text.includes(k)) score++; });
+      return { payload: scheme, score };
+    });
+    scored.sort((a, b) => b.score - a.score);
+    return scored.filter(s => s.score > 0).slice(0, 5);
+  }
+
+  async function askGroq(userMessage, schemes) {
+    const schemeNames = schemes.map(s => s.payload.name).join(', ');
+    const langInstructions = { en: 'Respond in English.', kn: 'Respond in Kannada language.', hi: 'Respond in Hindi language.' };
+    const prompt = `User says: "${userMessage}". Matching schemes: ${schemeNames}. ${langInstructions[currentLang]} Be warm, simple, and encouraging. Tell them which 2-3 schemes they most likely qualify for and why, in 3-4 sentences. Use "akka" if Kannada, "didi" if Hindi.`;
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${CONFIG.groqKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'llama-3.1-8b-instant', messages: [{ role: 'user', content: prompt }], max_tokens: 300 })
+    });
+    const data = await response.json();
+    return data.choices[0].message.content;
+  }
+
+  async function handleSubmit() {
+    const input = document.getElementById('user-input').value.trim();
+    if (!input) return;
+    document.getElementById('results').innerHTML = `<div class="loading-card"><div class="spinner"></div><p>Finding your schemes...</p></div>`;
+    document.getElementById('user-input').value = '';
+    try {
+      let schemes = searchQdrant(input);
+      const ageMatch = input.match(/\b(\d+)\s*year/i);
+      if (ageMatch) {
+        const age = parseInt(ageMatch[1]);
+        schemes = schemes.filter(s => {
+          if (s.payload.name.includes("Sandhya Suraksha") && age < 65) return false;
+          if (s.payload.name.includes("Sukanya") && age > 10) return false;
+          if (s.payload.name.includes("Kisan") && !input.match(/farm|kisan|agriculture|crop/i)) return false;
+          return true;
+        });
+      }
+      const aiResponse = await askGroq(input, schemes);
+      document.getElementById('bot-message').textContent = aiResponse;
+      let html = `<p class="results-header">${schemes.length} schemes found for you</p>`;
+      schemes.forEach((s, i) => {
+        const p = s.payload;
+        const docs = p.documents.map(d => `<span>${d}</span>`).join('');
+        html += `<div class="scheme-card"><h3>${p.name}${i === 0 ? ' <span class="badge">Best match</span>' : ''}</h3><p>${p.description}</p><p class="docs-label">Documents needed</p><div class="docs">${docs}</div></div>`;
+      });
+      const shareText = `HaqDar found these govt schemes for me:\n${schemes.map(s => '• ' + s.payload.name).join('\n')}\n\nCheck yours: https://haqdar-app.netlify.app`;
+      html += `<button class="share-btn" onclick="window.open('https://wa.me/?text=${encodeURIComponent(shareText)}')">📲 Share on WhatsApp</button>`;
+      document.getElementById('results').innerHTML = html;
+    } catch (err) {
+      document.getElementById('results').innerHTML = '<div class="loading-card"><p>Something went wrong. Please try again.</p></div>';
+      console.error(err);
+    }
+  }
+
+  document.getElementById('user-input').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') handleSubmit();
+  });
+</script>
+</body>
+</html>
